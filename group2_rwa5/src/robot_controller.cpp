@@ -43,8 +43,15 @@ robot_move_group_2(robot_controller_options_2) {
     robot_move_group_2.setMaxAccelerationScalingFactor(1.0);
     robot_move_group_2.allowReplanning(true);
 
-
-
+    /* These are joint positions used for the home position
+     * [0] = linear_arm_actuator
+     * [1] = shoulder_pan_joint
+     * [2] = shoulder_lift_joint
+     * [3] = elbow_joint
+     * [4] = wrist_1_joint
+     * [5] = wrist_2_joint
+     * [6] = wrist_3_joint
+     */
 
     home_joint_pose_ = {0.0, 3.11, -1.60, 2.0, 4.30, -1.53, 0};
     home_joint_pose_1 = {1.18, 3.11, -1.60, 2.0, 4.30, -1.53, 0};
@@ -53,7 +60,7 @@ robot_move_group_2(robot_controller_options_2) {
     belt_drop_pose_ = {2.5, 0, -1.60, 2.0, 3.47, -1.53, 0};
     conveyor = {1.13, 0, -0.70, 1.65, 3.74, -1.56, 0};
     drop_part={2.65, 1.57, -1.60, 2.0, 3.47, -1.53, 0};
-
+    // drop_part1 = {-0.89, 3.11, -1.60, 2.0, 4.30, -1.53, 0}
     home_joint_pose_2 = {-1.18, 3.11, -1.60, 2.0, 4.30, -1.53, 0};
 
 
@@ -377,8 +384,9 @@ bool RobotController::DropPart(geometry_msgs::Pose part_pose, int agv_id) {
   if( not is_faulty_ ) {
 	  this->GripperToggle(false);
 	  ROS_INFO_STREAM("Dropping");
-	  robot_move_group_.setJointValueTarget(kit_drop_pose_);
-	  this->Execute();
+    SendRobotPosition(bin_drop_pose_);
+	  // robot_move_group_.setJointValueTarget(kit_drop_pose_);
+	  // this->Execute();
 	  ros::Duration(1.0).sleep();
 	  drop =true;
   }
@@ -393,7 +401,7 @@ bool RobotController::DropPart(geometry_msgs::Pose part_pose, int agv_id) {
   }
   ROS_INFO_STREAM("Moving to end of conveyor...");
 
-  SendRobotPosition(bin_drop_pose_);
+  // SendRobotPosition(bin_drop_pose_);
   // robot_move_group_.setJointValueTarget(kit_drop_pose_);
   // this->Execute();
   // if(faulty-==true)
