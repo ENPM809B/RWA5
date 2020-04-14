@@ -376,12 +376,14 @@ void AriacOrderManager::dropallparts(std::vector<std::pair<std::string,geometry_
   ROS_INFO_STREAM("Dropping all Parts");
   do {
     ROS_INFO_STREAM(i);
-    drop_pose_ = {2.4, 1.57, -1.60, 2.0, 4.30, -1.53, 0};
+
     if (agv_id == 1) {
+      drop_pose_ = {2.4, 1.57, -1.60, 2.0, 4.30, -1.53, 0};
       arm1_.PickPart(placed_parts[i].second);
       arm1_.SendRobotPosition(drop_pose_);
       arm1_.GripperToggle(false);
     } else {
+      drop_pose_ = {-0.89, -3.11, -1.60, 2.0, 4.30, -1.53, 0};
       arm2_.PickPart(placed_parts[i].second);
       arm2_.SendRobotPosition(drop_pose_);
       arm2_.GripperToggle(false);
