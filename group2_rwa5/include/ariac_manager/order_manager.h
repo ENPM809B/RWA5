@@ -27,8 +27,8 @@ public:
     std::map<std::string, std::list<std::pair<std::string,geometry_msgs::Pose>>> GetOrder();
     bool PickAndPlace(std::pair<std::string,geometry_msgs::Pose> object_prop,int agvnum);
     void SubmitAGV(int num);
-    bool checkOrderUpdate(int,int,std::string);
-    void dropallparts(std::vector<std::pair<std::string,geometry_msgs::Pose>>);
+    bool checkOrderUpdate(int,int,std::string, int agv_id);
+    void dropallparts(std::vector<std::pair<std::string,geometry_msgs::Pose>>, int agv_id);
     std::vector<std::string> GetProductType();
     std::vector<geometry_msgs::Pose> GetProductPose();
     std::vector<std::string> productlist_type;
@@ -49,7 +49,7 @@ private:
     AriacSensorManager camera_;
     geometry_msgs::Pose bin_pose;
     RobotController arm1_;
-//    RobotController arm2_;
+    RobotController arm2_;
     tf::TransformListener part_tf_listener_;
     std::vector<double> drop_pose_;
     std::pair<std::string,geometry_msgs::Pose> product_type_pose_;
@@ -63,4 +63,3 @@ private:
     int pulley_count_ = 0;
 
 };
-

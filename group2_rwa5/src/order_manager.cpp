@@ -7,7 +7,7 @@
 
 
 //AriacOrderManager::AriacOrderManager(): arm1_{"arm1"}, arm2_{"arm2"}
-AriacOrderManager::AriacOrderManager(): arm1_{"arm1","arm2"}
+AriacOrderManager::AriacOrderManager(): arm1_{"arm1"}, arm2_{"arm2"}
 
 {
     order_subscriber_ = order_manager_nh_.subscribe(
@@ -22,7 +22,7 @@ AriacOrderManager::~AriacOrderManager(){}
 
 void AriacOrderManager::OrderCallback(const osrf_gear::Order::ConstPtr& order_msg) {
     ROS_WARN_STREAM(">>>>> OrderCallback");
-    
+
     received_orders_.push_back(*order_msg);
     for (const auto &order:received_orders_){
 
@@ -35,7 +35,7 @@ void AriacOrderManager::OrderCallback(const osrf_gear::Order::ConstPtr& order_ms
             auto shipment_type = shipment.shipment_type;
             auto agv = shipment.agv_id.back();//--this returns a char
             ROS_INFO_STREAM(agv);
-            int agv_id = (shipment.agv_id == "any") ? 1 : agv - '0';
+            int agv_id = (shipment.agv_id == "any") ? 2 : agv - '0';
 
             auto products = shipment.products;
             ROS_INFO_STREAM("Order ID: " << order_id);
@@ -72,10 +72,10 @@ void AriacOrderManager::OrderCallback(const osrf_gear::Order::ConstPtr& order_ms
             // ROS_INFO_STREAM("Gear count in order " << gear_count_);
             ROS_INFO_STREAM("Part read from bin 1: " << bin1_part);
             ROS_INFO_STREAM("Part read from bin 2: " << bin2_part);
-            ROS_INFO_STREAM("Part read from bin 3: " << bin3_part);   
+            ROS_INFO_STREAM("Part read from bin 3: " << bin3_part);
             ROS_INFO_STREAM("Part read from bin 4: " << bin4_part);
             ROS_INFO_STREAM("Part read from bin 5: " << bin5_part);
-            ROS_INFO_STREAM("Part read from bin 6: " << bin6_part);         
+            ROS_INFO_STREAM("Part read from bin 6: " << bin6_part);
         }
     }
 }
@@ -90,7 +90,7 @@ void AriacOrderManager::OrderCallback(const osrf_gear::Order::ConstPtr& order_ms
 std::string AriacOrderManager::GetProductFrame(std::string product_type) {
     //--Grab the last one from the list then remove itle()
     ROS_WARN_STREAM("Came Here");
-    
+
     if (!product_frame_list_.empty() && product_frame_list_.count(product_type)!=0) {
         std::string frame = product_frame_list_[product_type].back();
         // ROS_INFO_STREAM("Frame >>>> " << frame);
@@ -137,19 +137,19 @@ std::string AriacOrderManager::GetProductFrame(std::string product_type) {
             part_tf_listener_.transformPose("/world",StampedPose_in,StampedPose_out);
 
             // Drop in the adjacent bin
-            arm1_.DropPart(StampedPose_out.pose);
+            // arm1_.DropPart(StampedPose_out.pose);
 
             ros::spinOnce();
             product_frame_list_ = camera_.get_product_frame_list();
             // dist=dist+0.8;
         // }
-            ROS_INFO_STREAM("Length"<<product_frame_list_.size()); 
+            ROS_INFO_STREAM("Length"<<product_frame_list_.size());
             std::string frame = product_frame_list_[product_type].back();
             // ROS_INFO_STREAM("Frame >>>> " << frame);
             product_frame_list_[product_type].pop_back();
             return frame;
 
-        
+
   }
 
 }
@@ -176,8 +176,11 @@ bool AriacOrderManager::PickAndPlace(const std::pair<std::string,geometry_msgs::
         part_pose.position.z = part_pose.position.z;
 
     //--task the robot to pick up this part again from the bin
-    bool failed_pick = arm1_.PickPart(part_pose);
-
+    if (agv_id == 1)
+      bool failed_pick = arm1_.PickPart(part_pose);
+    else
+      arm1_.SendRobotHome1();
+      bool failed_pick = arm2_.PickPart(part_pose);
     // ROS_WARN_STREAM("Picking up state " << failed_pick);
     // ros::Duration(0.5).sleep();
 
@@ -185,11 +188,11 @@ bool AriacOrderManager::PickAndPlace(const std::pair<std::string,geometry_msgs::
     //     auto part_pose = camera_.GetPartPose("/world",product_frame);  //sensor.cpp
     //     failed_pick = arm1_.PickPart(part_pose);  //robot_controller
     // }
-     
+
     //--get the pose of the object in the tray from the order
     geometry_msgs::Pose drop_pose = product_type_pose.second;
 
-    geometry_msgs::PoseStamped StampedPose_in,StampedPose_out;
+    geometry_msgs::PoseStamped StampedPose_in, StampedPose_out;
 
     if(agv_id==1){
         StampedPose_in.header.frame_id = "/kit_tray_1";
@@ -212,8 +215,10 @@ bool AriacOrderManager::PickAndPlace(const std::pair<std::string,geometry_msgs::
 
     // This is checking if part is faulty ior not
     bool success = false;
-    if( not success) {
-    	success = arm1_.DropPart(StampedPose_out.pose); //robot_controller
+    if( not success and agv_id == 1) {
+    	success = arm1_.DropPart(StampedPose_out.pose, agv_id); //robot_controller
+    } else {
+      success = arm2_.DropPart(StampedPose_out.pose, agv_id);
     }
     placed_parts.push_back(std::make_pair(product_type,StampedPose_out.pose));
 
@@ -246,14 +251,14 @@ void AriacOrderManager::ExecuteOrder() {
         auto order_id = order.order_id;
         auto shipments = order.shipments;
 
-       
+
         for (const auto &shipment: shipments){
             auto shipment_type = shipment.shipment_type;
             auto agv = shipment.agv_id.back();//--this returns a char
             //-- if agv is any then we use AGV1, else we convert agv id to int
             //--agv-'0' converts '1' to 1 and '2' to 2
             ROS_INFO_STREAM(agv);
-            int agv_id = (shipment.agv_id == "any") ? 1 : agv - '0';
+            int agv_id = (shipment.agv_id == "any") ? 2 : agv - '0';
             auto products = shipment.products;
             ROS_INFO_STREAM("Order ID: " << order_id);
             ROS_INFO_STREAM("Shipment Type: " << shipment_type);
@@ -269,7 +274,7 @@ void AriacOrderManager::ExecuteOrder() {
                 if(size!=new_size) {
                     ROS_INFO_STREAM("Phir");
                     int diff=new_size-size;
-                    update=checkOrderUpdate(i,diff,order_id);
+                    update=checkOrderUpdate(i,diff,order_id, agv_id);
                 }
                 if(update==true)
                 {
@@ -283,7 +288,7 @@ void AriacOrderManager::ExecuteOrder() {
                 //ROS_INFO_STREAM("Product type: " << product_type_pose_.first);
                 product_type_pose_.second = product.pose;
                 ROS_INFO_STREAM("Product pose: " << product_type_pose_.second.position.x);
-        
+
                     // ros::spinOnce();
                     // product_frame_list_ = camera_.get_product_frame_list();
 //                bool pick_n_place_success = false;
@@ -298,7 +303,7 @@ void AriacOrderManager::ExecuteOrder() {
             if(update==false)
             {
             ros::Time a=ros::Time::now();
-            ros::Duration(5).sleep(); 
+            ros::Duration(5).sleep();
             ros::Time b=ros::Time::now();
             ros::Duration diffi1=b-a;
 
@@ -315,15 +320,15 @@ void AriacOrderManager::ExecuteOrder() {
             int new_size=received_orders_.size();
             if(size!=new_size) {
                 int diff=new_size-size;
-                update=checkOrderUpdate(i,diff,order_id);
+                update=checkOrderUpdate(i,diff,order_id, agv_id);
             }
             }
 
 
-            if(update==false) { 
+            if(update==false) {
                 SubmitAGV(agv_id);
                 ROS_INFO_STREAM("Submitting AGV");
-                placed_parts.clear();   
+                placed_parts.clear();
                 int finish=1;
             }
             else {
@@ -365,20 +370,27 @@ void AriacOrderManager::SubmitAGV(int num) {
     }
 }
 
-void AriacOrderManager::dropallparts(std::vector<std::pair<std::string,geometry_msgs::Pose>> placed_parts)
+void AriacOrderManager::dropallparts(std::vector<std::pair<std::string,geometry_msgs::Pose>> placed_parts, int agv_id)
 {
   int i=0;
   ROS_INFO_STREAM("Dropping all Parts");
   do {
     ROS_INFO_STREAM(i);
     drop_pose_ = {2.4, 1.57, -1.60, 2.0, 4.30, -1.53, 0};
-    arm1_.PickPart(placed_parts[i].second);
-    arm1_.SendRobotPosition(drop_pose_);
-    arm1_.GripperToggle(false);
+    if (agv_id == 1) {
+      arm1_.PickPart(placed_parts[i].second);
+      arm1_.SendRobotPosition(drop_pose_);
+      arm1_.GripperToggle(false);
+    } else {
+      arm2_.PickPart(placed_parts[i].second);
+      arm2_.SendRobotPosition(drop_pose_);
+      arm2_.GripperToggle(false);
+    }
     i++;
   }while(i<placed_parts.size());
-  arm1_.SendRobotHome();
+  if (agv_id == 1) arm1_.SendRobotHome();
 
+  else arm2_.SendRobotHome2();
 }
 
 std::vector<std::string> AriacOrderManager::GetProductType(){
@@ -389,19 +401,19 @@ std::vector<geometry_msgs::Pose> AriacOrderManager::GetProductPose(){
     return productlist_pose;
 }
 
-bool AriacOrderManager::checkOrderUpdate(int i,int diff, std::string order_id){
+bool AriacOrderManager::checkOrderUpdate(int i,int diff, std::string order_id, int agv_id){
     int update_no=0;
-    for(int k=i+1;k<diff+1;k++) { 
+    for(int k=i+1;k<diff+1;k++) {
         const auto &var = received_orders_[k];
         ROS_INFO_STREAM("Order"<<var.order_id);
         auto new_order=var.order_id;
         if(order_id+"_update_"+std::to_string(update_no)==new_order) {
-            ROS_INFO_STREAM("Found a New Order"); 
+            ROS_INFO_STREAM("Found a New Order");
             // TO-DO Compare current and new order
             // drop all parts (Remove parts from tray )
-            dropallparts(placed_parts);  
+            dropallparts(placed_parts, agv_id);
             placed_parts.clear();
-            return true;  
+            return true;
         }
         update_no++;
     }

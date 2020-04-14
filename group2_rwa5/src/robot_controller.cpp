@@ -14,16 +14,16 @@
  * Class attributes are initialized in the constructor init list
  * You can instantiate another robot by passing the correct parameter to the constructor
  */
-RobotController::RobotController(std::string arm_id_1,std::string arm_id_2) :
+RobotController::RobotController(std::string arm_id_1) :
 robot_controller_nh_("/ariac/"+arm_id_1),
 robot_controller_options("manipulator",
         "/ariac/"+arm_id_1+"/robot_description",
         robot_controller_nh_),
 robot_move_group_(robot_controller_options),
 
-robot_controller_nh_2("/ariac/"+arm_id_2),
+robot_controller_nh_2("/ariac/"+arm_id_1),
 robot_controller_options_2("manipulator",
-        "/ariac/"+arm_id_2+"/robot_description",
+        "/ariac/"+arm_id_1+"/robot_description",
         robot_controller_nh_2),
 robot_move_group_2(robot_controller_options_2) {
 
@@ -45,8 +45,9 @@ robot_move_group_2(robot_controller_options_2) {
 
 
 
-   
+
     home_joint_pose_ = {0.0, 3.11, -1.60, 2.0, 4.30, -1.53, 0};
+    home_joint_pose_1 = {1.18, 3.11, -1.60, 2.0, 4.30, -1.53, 0};
     bin_drop_pose_ = {2.5, 3.11, -1.60, 2.0, 3.47, -1.53, 0};
     kit_drop_pose_ = {2.65, 1.57, -1.60, 2.0, 3.47, -1.53, 0};
     belt_drop_pose_ = {2.5, 0, -1.60, 2.0, 3.47, -1.53, 0};
@@ -61,7 +62,7 @@ robot_move_group_2(robot_controller_options_2) {
 
     //--topic used to get the status of the gripper
     gripper_subscriber_ = gripper_nh_.subscribe(
-            "/ariac/arm1/gripper/state", 10, &RobotController::GripperCallback, this);
+            "/ariac/arm2/gripper/state", 10, &RobotController::GripperCallback, this);
 
     SendRobotHome();
     SendRobotHome2();
@@ -128,7 +129,7 @@ robot_move_group_2(robot_controller_options_2) {
     agv_position_.position.z = agv_tf_transform_.getOrigin().z() + 4 * offset_;
 
     gripper_client_ = robot_controller_nh_.serviceClient<osrf_gear::VacuumGripperControl>(
-            "/ariac/arm1/gripper/control");
+            "/ariac/arm2/gripper/control");
     // break_beam_subscriber_ = robot_controller_nh_.subscribe("/ariac/break_beam_1_change", 10, &RobotController::break_beam_callback_,this);
 
     counter_ = 0;
@@ -254,6 +255,19 @@ void RobotController::SendRobotHome() {
      ros::Duration(0.5).sleep();
 }
 
+void RobotController::SendRobotHome1() {
+    // ros::Duration(2.0).sleep();
+    robot_move_group_.setJointValueTarget(home_joint_pose_1);
+    // this->execute();
+    ros::AsyncSpinner spinner(4);
+    spinner.start();
+    if (this->Planner()) {
+        robot_move_group_.move();
+        ros::Duration(0.5).sleep();
+    }
+     ros::Duration(0.5).sleep();
+}
+
 void RobotController::SendRobotHome2() {
     // ros::Duration(2.0).sleep();
     robot_move_group_2.setJointValueTarget(home_joint_pose_2);
@@ -293,7 +307,7 @@ void RobotController::GripperToggle(const bool& state) {
     }
 }
 
-bool RobotController::DropPart(geometry_msgs::Pose part_pose) {
+bool RobotController::DropPart(geometry_msgs::Pose part_pose, int agv_id) {
   counter_++;
 
   pick = false;
@@ -304,7 +318,10 @@ bool RobotController::DropPart(geometry_msgs::Pose part_pose) {
 
 
   ROS_INFO_STREAM("Moving to end of conveyor...");
-  SendRobotPosition(kit_drop_pose_);
+  if (agv_id == 2)
+    SendRobotHome2();
+  else
+    SendRobotPosition(kit_drop_pose_);
 
   // robot_move_group_.setJointValueTarget(kit_drop_pose_);
   // this->Execute();
@@ -351,7 +368,7 @@ bool RobotController::DropPart(geometry_msgs::Pose part_pose) {
   this->GoToTarget({temp_pose, part_pose},0);
   // ros::Duration(0.5).sleep();
 
-  
+
   ROS_INFO_STREAM("Checking if part if faulty");
 
   ros::Duration(1.0).sleep();
@@ -375,7 +392,6 @@ bool RobotController::DropPart(geometry_msgs::Pose part_pose) {
 	  drop = false;
   }
   ROS_INFO_STREAM("Moving to end of conveyor...");
-
 
   SendRobotPosition(bin_drop_pose_);
   // robot_move_group_.setJointValueTarget(kit_drop_pose_);
@@ -577,6 +593,3 @@ while(!beam.getBeam())
     }
     return gripper_state_;
 }
-
-
-

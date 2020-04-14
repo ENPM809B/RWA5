@@ -27,7 +27,7 @@
 
 class RobotController{
 public:
-    RobotController(std::string arm_id_1, std::string arm_id_2);
+    RobotController(std::string arm_id_1);
     ~RobotController();
     bool Planner();
     void Execute();
@@ -36,7 +36,7 @@ public:
     void SendRobotHome();
     void SendRobotHome2();
     void SendRobotPosition(std::vector<double> pose);
-    bool DropPart(geometry_msgs::Pose pose);
+    bool DropPart(geometry_msgs::Pose pose, int agv_id);
     void GripperToggle(const bool& state);
     void GripperCallback(const osrf_gear::VacuumGripperState::ConstPtr& grip);
     void qualityControlSensor1Callback(const osrf_gear::LogicalCameraImage::ConstPtr &);
@@ -44,6 +44,7 @@ public:
     bool PickPart(geometry_msgs::Pose& part_pose);
     bool PickPartconveyor(std::string);
     void sendRobotToConveyor();
+    void SendRobotHome1();
 
 
 private:
@@ -52,7 +53,7 @@ private:
     ros::ServiceClient gripper_client_;
     ros::NodeHandle gripper_nh_;
     ros::Subscriber gripper_subscriber_;
-    
+
     ros::NodeHandle robot_controller_nh_2;
     moveit::planning_interface::MoveGroupInterface::Options robot_controller_options_2;
     ros::ServiceClient gripper_client_2;
@@ -80,6 +81,7 @@ private:
     std::string object;
     bool plan_success_;
     std::vector<double> home_joint_pose_;
+    std::vector<double> home_joint_pose_1;
     std::vector<double> bin_drop_pose_;
     std::vector<double> kit_drop_pose_;
     std::vector<double> belt_drop_pose_;
