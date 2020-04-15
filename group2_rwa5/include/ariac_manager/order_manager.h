@@ -25,10 +25,12 @@ public:
     void ExecuteOrder();
     std::string GetProductFrame(std::string product_type);
     std::map<std::string, std::list<std::pair<std::string,geometry_msgs::Pose>>> GetOrder();
-    bool PickAndPlace(std::pair<std::string,geometry_msgs::Pose> object_prop,int agvnum);
+    bool PickAndPlace(std::pair<std::string,geometry_msgs::Pose> product_type_pose,int agv_id);
+    bool PickAndPlace(std::pair<std::string,geometry_msgs::Pose> product_type_pose, std::string empty_bin);
     void SubmitAGV(int num);
     bool checkOrderUpdate(int,int,std::string, int agv_id);
     void dropallparts(std::vector<std::pair<std::string,geometry_msgs::Pose>>, int agv_id);
+    void OutOfReach(std::string arm, std::string num, std::pair<std::string,geometry_msgs::Pose> product, int agv_id);
     std::vector<std::string> GetProductType();
     std::vector<geometry_msgs::Pose> GetProductPose();
     std::vector<std::string> productlist_type;
@@ -39,6 +41,8 @@ public:
     std::string bin4_part;
     std::string bin5_part;
     std::string bin6_part;
+    std::vector<std::string> bin_parts;
+    std::string empty_bin;
 
 private:
     ros::NodeHandle order_manager_nh_;
