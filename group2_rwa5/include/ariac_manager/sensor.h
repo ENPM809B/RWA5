@@ -31,9 +31,10 @@ public:
     void LogicalCamera6Callback(const osrf_gear::LogicalCameraImage::ConstPtr&);
     void break_beam_callback_(const osrf_gear::Proximity::ConstPtr &);
     bool getBeam();
+    bool init1, init2, init3 , init4, init5, init6;
 //    bool IsPartFaulty() const;
 //    void qualityControlSensor1Callback(const osrf_gear::LogicalCameraImage::ConstPtr &image_msg);
-    
+
     // std::map<std::string, std::vector<std::string>> product_frame_list_;
 
 
@@ -52,6 +53,8 @@ public:
     std::string LogicalCamera4PartType();
     std::string LogicalCamera5PartType();
     std::string LogicalCamera6PartType();
+    geometry_msgs::Pose BinGetPartPose(const std::string& src_frame,
+                                                           std::string product_type, std::string num);
 
     std::string cam1_part_type;
     std::string cam2_part_type;
@@ -93,4 +96,3 @@ private:
     std::string logical1_,logical2_,logical3_,logical4_,logical5_,logical6_;
     int camera1_frame_counter_, camera2_frame_counter_, camera3_frame_counter_, camera4_frame_counter_,camera5_frame_counter_,camera6_frame_counter_,break_beam_counter_,prev1,prev2,prev3,prev4,prev5,prev6,f;
 };
-

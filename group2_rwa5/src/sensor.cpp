@@ -45,6 +45,13 @@ camera3_part_list{}{
     init5_ = false;
     init6_ = false;
 
+    init1 = false;
+    init2 = false;
+    init3 = false;
+    init4 = false;
+    init5 = false;
+    init6 = false;
+
     cam_1_ = false;
     cam_2_ = false;
     cam_3_ = false;
@@ -66,9 +73,10 @@ AriacSensorManager::~AriacSensorManager() {}
 //}
 
 void AriacSensorManager::LogicalCamera1Callback(const osrf_gear::LogicalCameraImage::ConstPtr& image_msg){
-    // if (init1_) return;
+    if (init1) return;
     if (image_msg->models.size() == 0) {
         // ROS_ERROR_STREAM("Logical Camera 1 does not see anything");
+        init1 = true;
     }
     else{
         if(image_msg->models.size() !=prev1){
@@ -83,9 +91,10 @@ void AriacSensorManager::LogicalCamera1Callback(const osrf_gear::LogicalCameraIm
 
 
 void AriacSensorManager::LogicalCamera2Callback(const osrf_gear::LogicalCameraImage::ConstPtr & image_msg){
-    // if (init2_) return;
+    if (init2) return;
     if (image_msg->models.size() == 0){
         // ROS_ERROR_STREAM("Logical Camera 2 does not see anything");
+        init2 = true;
     }
    else{
         if(image_msg->models.size() !=prev2){
@@ -99,9 +108,10 @@ void AriacSensorManager::LogicalCamera2Callback(const osrf_gear::LogicalCameraIm
 }
 
 void AriacSensorManager::LogicalCamera3Callback(const osrf_gear::LogicalCameraImage::ConstPtr & image_msg){
-    // if (init3_) return;
+    if (init3) return;
     if (image_msg->models.size() == 0){
         // ROS_ERROR_STREAM("Logical Camera 3 does not see anything");
+        init3 = true;
     }
     else {
         if(image_msg->models.size() !=prev3){
@@ -110,31 +120,39 @@ void AriacSensorManager::LogicalCamera3Callback(const osrf_gear::LogicalCameraIm
                              "Logical camera 3: '" << image_msg->models.size() << "' objects.");
             current_parts_3_ = *image_msg;
             this->BuildProductFrames(3);
-        }  
+        }
     }
 }
 
 
 void AriacSensorManager::LogicalCamera4Callback(const osrf_gear::LogicalCameraImage::ConstPtr& image_msg){
-    // if (init1_) return;
+    if (init4) return;
+    ROS_INFO_STREAM_THROTTLE(2,
+                     "Logical camera 4: '" << image_msg->models.size() << "' objects.");
+
     if (image_msg->models.size() == 0) {
         // ROS_ERROR_STREAM("Logical Camera 4 does not see anything");
+        init4 = true;
     }
     else {
         if(image_msg->models.size() !=prev4){
             prev4=image_msg->models.size();
-            ROS_INFO_STREAM_THROTTLE(10,
+            ROS_INFO_STREAM_THROTTLE(2,
                              "Logical camera 4: '" << image_msg->models.size() << "' objects.");
             current_parts_4_ = *image_msg;
             this->BuildProductFrames(4);
         }
     }
+    // std::string type = image_msg->models.type;
+    // ROS_INFO_STREAM_THROTTLE(4,
+    //                  "Logical camera 4: '" << type << "' objects.");
 }
 
 void AriacSensorManager::LogicalCamera5Callback(const osrf_gear::LogicalCameraImage::ConstPtr& image_msg){
-    // if (init1_) return;
+    if (init5) return;
     if (image_msg->models.size() == 0) {
         // ROS_ERROR_STREAM("Logical Camera 5 does not see anything");
+        init5 = true;
     }
     else {
         if(image_msg->models.size() !=prev5){
@@ -148,9 +166,10 @@ void AriacSensorManager::LogicalCamera5Callback(const osrf_gear::LogicalCameraIm
 }
 
 void AriacSensorManager::LogicalCamera6Callback(const osrf_gear::LogicalCameraImage::ConstPtr& image_msg){
-    // if (init1_) return;
+    if (init6) return;
     if (image_msg->models.size() == 0) {
         // ROS_ERROR_STREAM("Logical Camera 6 does not see anything");
+        init6 = true;
     }
     else {
         if(image_msg->models.size() !=prev6){
@@ -164,7 +183,7 @@ void AriacSensorManager::LogicalCamera6Callback(const osrf_gear::LogicalCameraIm
 }
 
 void AriacSensorManager::BuildProductFrames(int camera_id){
-    if (camera_id == 1) {
+    if (camera_id == 1 and current_parts_1_.models.size() != 0) {
         for (auto& msg : current_parts_1_.models) {
             //--build the frame for each product
             std::string product_frame = "logical_camera_1_" + msg.type + "_" +
@@ -177,7 +196,7 @@ void AriacSensorManager::BuildProductFrames(int camera_id){
         cam_1_ = true;
         init1_=true;
     }
-    else if (camera_id == 2) {
+    else if (camera_id == 2 and current_parts_2_.models.size() != 0) {
         for (auto& msg : current_parts_2_.models) {
             //--build the frame for each product
             std::string product_frame = "logical_camera_2_" + msg.type + "_" +
@@ -191,7 +210,7 @@ void AriacSensorManager::BuildProductFrames(int camera_id){
         cam_2_ = true;
         init2_=true;
     }
-    else if (camera_id == 3) {
+    else if (camera_id == 3 and current_parts_3_.models.size() != 0) {
         for (auto& msg : current_parts_3_.models) {
             //--build the frame for each product
             std::string product_frame = "logical_camera_3_" + msg.type + "_" +
@@ -205,7 +224,7 @@ void AriacSensorManager::BuildProductFrames(int camera_id){
         cam_3_ = true;
         init3_=true;
     }
-    else if (camera_id == 4) {
+    else if (camera_id == 4 and current_parts_4_.models.size() != 0) {
     for (auto& msg : current_parts_4_.models) {
             //--build the frame for each product
             std::string product_frame = "logical_camera_4_" + msg.type + "_" +
@@ -219,7 +238,7 @@ void AriacSensorManager::BuildProductFrames(int camera_id){
         cam_4_ = true;
         init4_=true;
     }
-    else if (camera_id == 5) {
+    else if (camera_id == 5 and current_parts_5_.models.size() != 0) {
     for (auto& msg : current_parts_5_.models) {
             //--build the frame for each product
             std::string product_frame = "logical_camera_5_" + msg.type + "_" +
@@ -233,7 +252,7 @@ void AriacSensorManager::BuildProductFrames(int camera_id){
         cam_5_ = true;
         init5_=true;
     }
-    else if (camera_id == 6) {
+    else if (camera_id == 6 and current_parts_6_.models.size() != 0) {
     for (auto& msg : current_parts_6_.models) {
             //--build the frame for each product
             std::string product_frame = "logical_camera_6_" + msg.type + "_" +
@@ -272,10 +291,10 @@ geometry_msgs::Pose AriacSensorManager::GetPartPose(const std::string& src_frame
     } else {
         ros::spinOnce();
         ros::Duration(1.0).sleep();
-        this->BuildProductFrames(1);
+        // this->BuildProductFrames(1);
         ros::spinOnce();
         ros::Duration(1.0).sleep();
-        this->BuildProductFrames(2);
+        // this->BuildProductFrames(6);
 
         part_pose = this->GetPartPose(src_frame, target_frame);
     }
@@ -285,7 +304,7 @@ geometry_msgs::Pose AriacSensorManager::GetPartPose(const std::string& src_frame
 
 void AriacSensorManager::break_beam_callback_(const osrf_gear::Proximity::ConstPtr &msg) {
     if (msg->object_detected) {
-        ROS_INFO("Break beam 2 triggered.");      
+        ROS_INFO("Break beam 2 triggered.");
 break_beam_counter_ += 1;
         beam_=true;
      }
@@ -335,4 +354,47 @@ std::string AriacSensorManager::LogicalCamera6PartType(){
     // if (init1_) return;
     cam6_part_type = logical6_;
     return cam6_part_type;
+ }
+
+ geometry_msgs::Pose AriacSensorManager::BinGetPartPose(const std::string& src_frame,
+                                                        std::string product_type, std::string num) {
+     geometry_msgs::Pose part_pose;
+     int counter{1};
+     std::string type;
+     std::map<std::string, std::vector<std::string>> empty_bin_list;
+     std::string target_frame;
+     std::string frame;
+     for (int i = 1; i <= 15; i++) {
+       frame = "logical_camera_" + num + "_" + product_type + "_"
+                        + std::to_string(counter) + "_frame";
+       empty_bin_list[product_type].emplace_back(frame);
+       counter++;
+     }
+     ROS_INFO_STREAM("<<<<<<<< Bin part pose >>>>>>>>>");
+     target_frame = empty_bin_list[product_type].back();
+     ROS_INFO_STREAM("<<<<<<<<<<<" << target_frame << ">>>>>>>>>>>>");
+     int j = 0;
+     for (int j = 1; j <= 15; j++) {
+       target_frame = empty_bin_list[product_type].back();
+       ROS_INFO_STREAM("<<<<<<<< INSIDE!!! >>>>>>>>>");
+       ROS_INFO_STREAM("<<<<<<<<<<<" << target_frame << ">>>>>>>>>>>>");
+       try {
+         camera_tf_listener_.waitForTransform(src_frame, target_frame, ros::Time(0),
+                                              ros::Duration(3));
+         camera_tf_listener_.lookupTransform(src_frame, target_frame, ros::Time(0),
+                                             camera_tf_transform_);
+
+         part_pose.position.x = camera_tf_transform_.getOrigin().x();
+         part_pose.position.y = camera_tf_transform_.getOrigin().y();
+         part_pose.position.z = camera_tf_transform_.getOrigin().z();
+         ROS_INFO_STREAM("x: " << part_pose.position.x << " y: " << part_pose.position.y
+                          << " z: " << part_pose.position.z);
+      } catch (tf2::TransformException &ex) {
+         ROS_WARN("%s",ex.what());
+         // ros::Duration(1.0).sleep();
+         empty_bin_list[product_type].pop_back();
+         continue;
+        }
+     }
+     return part_pose;
  }

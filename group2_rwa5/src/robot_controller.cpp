@@ -60,7 +60,6 @@ robot_move_group_2(robot_controller_options_2) {
     belt_drop_pose_ = {2.5, 0, -1.60, 2.0, 3.47, -1.53, 0};
     conveyor = {1.13, 0, -0.70, 1.65, 3.74, -1.56, 0};
     drop_part={2.65, 1.57, -1.60, 2.0, 3.47, -1.53, 0};
-    // drop_part1 = {-0.89, 3.11, -1.60, 2.0, 4.30, -1.53, 0}
     home_joint_pose_2 = {-1.18, 3.11, -1.60, 2.0, 4.30, -1.53, 0};
 
 
@@ -69,7 +68,9 @@ robot_move_group_2(robot_controller_options_2) {
 
     //--topic used to get the status of the gripper
     gripper_subscriber_ = gripper_nh_.subscribe(
-            "/ariac/arm2/gripper/state", 10, &RobotController::GripperCallback, this);
+            "/ariac/arm1/gripper/state", 10, &RobotController::GripperCallback, this);
+    gripper_subscriber_2 = gripper_nh_2.subscribe(
+            "/ariac/arm2/gripper/state", 10, &RobotController::GripperCallback2, this);
 
     SendRobotHome();
     SendRobotHome2();
@@ -89,18 +90,6 @@ robot_move_group_2(robot_controller_options_2) {
     ROS_INFO_STREAM(fixed_orientation_.z);
     ROS_INFO_STREAM(fixed_orientation_.w);
 
-    // fixed_end_orientation_.x=-0.471938;
-    // fixed_end_orientation_.y=0.517214;
-    // fixed_end_orientation_.z=0.512411;
-    // fixed_end_orientation_.w=0.497192;
-
-
-
-    // ROS_INFO_STREAM(fixed_orientation_);
-
-
-
-
     tf::quaternionMsgToTF(fixed_orientation_,q);
     tf::Matrix3x3(q).getRPY(roll_def_,pitch_def_,yaw_def_);
         ROS_INFO_STREAM(roll_def_);
@@ -109,10 +98,6 @@ robot_move_group_2(robot_controller_options_2) {
 
 
     end_position_ = home_joint_pose_;
-   // end_position_[0] = 2.5;
-   // end_position_[1] = 1.55;
-   // end_position_[2] = 1.2;
-
 
     robot_tf_listener_.waitForTransform("world", "arm1_ee_link", ros::Time(0),
                                             ros::Duration(10));
@@ -136,6 +121,8 @@ robot_move_group_2(robot_controller_options_2) {
     agv_position_.position.z = agv_tf_transform_.getOrigin().z() + 4 * offset_;
 
     gripper_client_ = robot_controller_nh_.serviceClient<osrf_gear::VacuumGripperControl>(
+            "/ariac/arm1/gripper/control");
+    gripper_client_2 = robot_controller_nh_2.serviceClient<osrf_gear::VacuumGripperControl>(
             "/ariac/arm2/gripper/control");
     // break_beam_subscriber_ = robot_controller_nh_.subscribe("/ariac/break_beam_1_change", 10, &RobotController::break_beam_callback_,this);
 
@@ -144,11 +131,21 @@ robot_move_group_2(robot_controller_options_2) {
 
     quality_control_camera_subscriber_ = robot_controller_nh_.subscribe("/ariac/quality_control_sensor_1", 10,
     		&RobotController::qualityControlSensor1Callback, this);
+    quality_control_camera_2_subscriber_ = robot_controller_nh_.subscribe("/ariac/quality_control_sensor_2", 10,
+    		&RobotController::qualityControlSensor2Callback, this);
 
     is_faulty_ = false;
 }
 
 void RobotController::qualityControlSensor1Callback(const osrf_gear::LogicalCameraImage::ConstPtr &image_msg) {
+	is_faulty_ = !image_msg->models.empty(); // if not empty then part is faulty
+	if(is_faulty_){
+		ROS_WARN_STREAM("Product is faulty and models.size is " << image_msg->models.size());
+	}
+	// else ROS_INFO_STREAM_THROTTLE(7, "prodcut is NOTTT faulty....and models.size is " << image_msg->models.size());
+}
+
+void RobotController::qualityControlSensor2Callback(const osrf_gear::LogicalCameraImage::ConstPtr &image_msg) {
 	is_faulty_ = !image_msg->models.empty(); // if not empty then part is faulty
 	if(is_faulty_){
 		ROS_WARN_STREAM("Product is faulty and models.size is " << image_msg->models.size());
@@ -314,6 +311,18 @@ void RobotController::GripperToggle(const bool& state) {
     }
 }
 
+void RobotController::GripperToggle2(const bool& state) {
+    gripper_service_2.request.enable = state;
+    gripper_client_2.call(gripper_service_2);
+    ros::Duration(1.0).sleep();
+    // if (gripper_client_.call(gripper_service_)) {
+    if (gripper_service_2.response.success) {
+        ROS_INFO_STREAM("Gripper activated!");
+    } else {
+        ROS_WARN_STREAM("Gripper activation failed!");
+    }
+}
+
 bool RobotController::DropPart(geometry_msgs::Pose part_pose, int agv_id) {
   counter_++;
 
@@ -333,28 +342,6 @@ bool RobotController::DropPart(geometry_msgs::Pose part_pose, int agv_id) {
   // robot_move_group_.setJointValueTarget(kit_drop_pose_);
   // this->Execute();
   ros::Duration(1.0).sleep();
-  // this->GripperStateCheck(part_pose);
-
-
-
-
-  // if (drop == false) {
-  //   ROS_INFO_STREAM("I am stuck here..." << object);
-  //   ros::Duration(2.0).sleep();
-  //   return drop;
-  // }
-  // ROS_INFO_STREAM("Dropping on AGV...");
-
-
-
-  // agv_position_.position.x -= 0.1;
-  // if (counter_ == 1) {
-  //   agv_position_.position.y -= 0.1;
-  // }
-  // if (counter_ >= 2) {
-  //   agv_position_.position.y += 0.1;
-  //   // agv_position_.position.x +=0.1;
-  // }
 
 
   part_pose.position.z += 0.1;
@@ -362,19 +349,9 @@ bool RobotController::DropPart(geometry_msgs::Pose part_pose, int agv_id) {
   // auto temp_pose = agv_position_;
   temp_pose.position.z += 0.35;
 
-
-
-  // temp_pose.position.y += 0.5;
-
-  // this->setTarget(part_pose);
-  // this->execute();
-  // ros::Duration(1.0).sleep();
-
-
   // Going to kit here
   this->GoToTarget({temp_pose, part_pose},0);
   // ros::Duration(0.5).sleep();
-
 
   ROS_INFO_STREAM("Checking if part if faulty");
 
@@ -382,13 +359,23 @@ bool RobotController::DropPart(geometry_msgs::Pose part_pose, int agv_id) {
   ros::spinOnce();
   ros::Duration(0.5).sleep();
   if( not is_faulty_ ) {
-	  this->GripperToggle(false);
-	  ROS_INFO_STREAM("Dropping");
-    SendRobotPosition(bin_drop_pose_);
-	  // robot_move_group_.setJointValueTarget(kit_drop_pose_);
-	  // this->Execute();
-	  ros::Duration(1.0).sleep();
-	  drop =true;
+    if (agv_id == 1) {
+      this->GripperToggle(false);
+  	  ROS_INFO_STREAM("Dropping");
+      SendRobotPosition(bin_drop_pose_);
+  	  // robot_move_group_.setJointValueTarget(kit_drop_pose_);
+  	  // this->Execute();
+  	  ros::Duration(1.0).sleep();
+  	  drop =true;
+    } else {
+      this->GripperToggle2(false);
+  	  ROS_INFO_STREAM("Dropping");
+      SendRobotPosition(bin_drop_pose_);
+  	  // robot_move_group_.setJointValueTarget(kit_drop_pose_);
+  	  // this->Execute();
+  	  ros::Duration(1.0).sleep();
+  	  drop =true;
+    }
   }
   else{
 	  ROS_INFO_STREAM("Moving to end of conveyor");
@@ -396,8 +383,11 @@ bool RobotController::DropPart(geometry_msgs::Pose part_pose, int agv_id) {
 	  // SendRobotPosition(conveyor);
 //	  this->Execute();
 	  ros::Duration(1.0).sleep();
-	  this->GripperToggle(false);
-	  drop = false;
+    if (agv_id == 1) this->GripperToggle(false);
+
+    else this->GripperToggle2(false);
+
+    drop = false;
   }
   ROS_INFO_STREAM("Moving to end of conveyor...");
 
@@ -419,65 +409,18 @@ bool RobotController::DropPart(geometry_msgs::Pose part_pose, int agv_id) {
   return drop;
 }
 
-// bool RobotController::DropPart(geometry_msgs::Pose part_pose) {
-//     // counter_++;
-//     // SendRobotPosition();
-//     drop_flag_ = true;
-
-//     ros::spinOnce();
-//     ROS_INFO_STREAM("Placing phase activated...");
-
-//     if (gripper_state_){//--while the part is still attached to the gripper
-//         //--move the robot to the end of the rail
-//          ROS_INFO_STREAM("Moving towards AGV1...");
-
-//          part_pose.position.z += 0.1;
-
-//          GoToTarget(part_pose,1);
-//          // SendRobotHome();
-//          // robot_move_group_.setJointValueTarget(end_position_);
-//          this->Execute();
-//          ros::Duration(0.5).sleep();
-//          ROS_INFO_STREAM("Actuating the gripper...");
-//          this->GripperToggle(false);
-
-
-
-
-//        auto temp_pose = part_pose;
-//        temp_pose.position.z += 0.5;
-//        this->GoToTarget({temp_pose, part_pose});
-//        ros::Duration(5).sleep();
-//        ros::spinOnce();
-//
-//
-//        ROS_INFO_STREAM("Actuating the gripper...");
-//        this->GripperToggle(false);
-//
-//        ros::spinOnce();
-//        if (!gripper_state_) {
-//            ROS_INFO_STREAM("Going to home position...");
-//            this->GoToTarget({temp_pose, home_cart_pose_});
-//            ros::Duration(3.0).sleep();
-//        }
-//
-
-
-
-
-
-
-//     drop_flag_ = false;
-//     return gripper_state_;
-// }
-
 void RobotController::GripperCallback(
         const osrf_gear::VacuumGripperState::ConstPtr& grip) {
     gripper_state_ = grip->attached;
 }
 
+void RobotController::GripperCallback2(
+        const osrf_gear::VacuumGripperState::ConstPtr& grip) {
+    gripper_state_2 = grip->attached;
+}
 
-bool RobotController::PickPart(geometry_msgs::Pose& part_pose) {
+
+bool RobotController::PickPart(geometry_msgs::Pose& part_pose, int agv_id) {
     // gripper_state = false;
     // pick = true;
     //ROS_INFO_STREAM("fixed_orientation_" << part_pose.orientation = fixed_orientation_);
@@ -516,33 +459,65 @@ bool RobotController::PickPart(geometry_msgs::Pose& part_pose) {
    planning_scene_interface.applyCollisionObjects(collision_objects);
 
     ROS_INFO_STREAM("Moving to part...");
-    part_pose.position.z = part_pose.position.z + 0.033;
-    // part_pose.position.x = part_pose.position.x - 0.02;
-    // part_pose.position.y = part_pose.position.y - 0.02;
-    auto temp_pose_1 = part_pose;
-    temp_pose_1.position.z += 0.2;
-    ROS_INFO_STREAM("Actuating the gripper..." << part_pose.position.z);
-    this->GripperToggle(true);
-    this->GoToTarget({temp_pose_1, part_pose},0);
-    // GoToTarget(part_pose);
+    if (agv_id == 1) {
+      part_pose.position.z = part_pose.position.z + 0.043;
+      // part_pose.position.x = part_pose.position.x - 0.02;
+      // part_pose.position.y = part_pose.position.y - 0.02;
+      auto temp_pose_1 = part_pose;
+      temp_pose_1.position.z += 0.2;
+      ROS_INFO_STREAM("Actuating the gripper..." << part_pose.position.z);
+      this->GripperToggle(true);
+      this->GoToTarget({temp_pose_1, part_pose},0);
+      // GoToTarget(part_pose);
 
-    // ROS_INFO_STREAM("Actuating the gripper..." << part_pose.position.z);
-    // this->GripperToggle(true);
-    ros::spinOnce();
-    while (!gripper_state_) {
-        part_pose.position.z -= 0.01;
-        this->GoToTarget({temp_pose_1, part_pose},0);
-        // GoToTarget(part_pose);
-        ROS_INFO_STREAM("Actuating the gripper...");
-        this->GripperToggle(true);
-        ros::spinOnce();
+      // ROS_INFO_STREAM("Actuating the gripper..." << part_pose.position.z);
+      // this->GripperToggle(true);
+      ros::spinOnce();
+      while (!gripper_state_) {
+          part_pose.position.z -= 0.01;
+          this->GoToTarget({temp_pose_1, part_pose},0);
+          // GoToTarget(part_pose);
+          ROS_INFO_STREAM("Actuating the gripper...");
+          this->GripperToggle(true);
+          ros::spinOnce();
+      }
+
+      ROS_INFO_STREAM("Going to waypoint...");
+      // part_pose.position.z += 0.2;
+      GoToTarget(temp_pose_1,0);
+      // GoToTarget(part_pose);
+      return gripper_state_;
+
+    } else {
+      part_pose.position.z = part_pose.position.z + 0.033;
+      // part_pose.position.x = part_pose.position.x - 0.02;
+      // part_pose.position.y = part_pose.position.y - 0.02;
+      auto temp_pose_1 = part_pose;
+      temp_pose_1.position.z += 0.2;
+      ROS_INFO_STREAM("Actuating the gripper..." << part_pose.position.z);
+      this->GripperToggle2(true);
+      this->GoToTarget({temp_pose_1, part_pose},0);
+      // GoToTarget(part_pose);
+
+      // ROS_INFO_STREAM("Actuating the gripper..." << part_pose.position.z);
+      // this->GripperToggle(true);
+      ros::spinOnce();
+      while (!gripper_state_2) {
+          part_pose.position.z -= 0.01;
+          this->GoToTarget({temp_pose_1, part_pose},0);
+          // GoToTarget(part_pose);
+          ROS_INFO_STREAM("Actuating the gripper...");
+          this->GripperToggle2(true);
+          ros::spinOnce();
+      }
+
+      ROS_INFO_STREAM("Going to waypoint...");
+      // part_pose.position.z += 0.2;
+      GoToTarget(temp_pose_1,0);
+      // GoToTarget(part_pose);
+      return gripper_state_2;
     }
 
-    ROS_INFO_STREAM("Going to waypoint...");
-    // part_pose.position.z += 0.2;
-    GoToTarget(temp_pose_1,0);
-    // GoToTarget(part_pose);
-    return gripper_state_;
 }
 
 void RobotController::sendRobotToConveyor(){
@@ -600,4 +575,111 @@ while(!beam.getBeam())
     GoToTarget(conveyor_part,1);
     }
     return gripper_state_;
+}
+
+bool RobotController::PickPart(geometry_msgs::Pose& part_pose) {
+    // gripper_state = false;
+    // pick = true;
+    //ROS_INFO_STREAM("fixed_orientation_" << part_pose.orientation = fixed_orientation_);
+    //ROS_WARN_STREAM("Picking the part...");
+    moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+  moveit::planning_interface::MoveGroupInterface group(robot_controller_options);
+
+  moveit_msgs::CollisionObject collision_object;
+  collision_object.header.frame_id = robot_move_group_.getPlanningFrame();
+
+  // The id of the object is used to identify it.
+  collision_object.id = "box1";
+
+  // Define a box to add to the world.
+  shape_msgs::SolidPrimitive primitive;
+  primitive.type = primitive.BOX;
+  primitive.dimensions.resize(3);
+  primitive.dimensions[0] = 0.6;
+  primitive.dimensions[1] = 0.6;
+  primitive.dimensions[2] = 0.55;
+
+  // Define a pose for the box (specified relative to frame_id)
+  geometry_msgs::Pose box_pose;
+  box_pose.orientation.w = 1.0;
+  box_pose.position.x = -0.3;
+  box_pose.position.y = -1.916;
+  box_pose.position.z = 0.45;
+
+  collision_object.primitives.push_back(primitive);
+  collision_object.primitive_poses.push_back(box_pose);
+  collision_object.operation = collision_object.ADD;
+
+  std::vector<moveit_msgs::CollisionObject> collision_objects;
+  collision_objects.push_back(collision_object);
+  ROS_INFO_NAMED("tutorial", "Add an object into the world");
+  planning_scene_interface.applyCollisionObjects(collision_objects);
+
+  ROS_INFO_STREAM("Moving to part...");
+  part_pose.position.z = part_pose.position.z + 0.033;
+      // part_pose.position.x = part_pose.position.x - 0.02;
+      // part_pose.position.y = part_pose.position.y - 0.02;
+  auto temp_pose_1 = part_pose;
+  temp_pose_1.position.z += 0.2;
+  ROS_INFO_STREAM("Actuating the gripper..." << part_pose.position.z);
+  this->GripperToggle2(true);
+  this->GoToTarget({temp_pose_1, part_pose},0);
+      // GoToTarget(part_pose);
+
+      // ROS_INFO_STREAM("Actuating the gripper..." << part_pose.position.z);
+      // this->GripperToggle(true);
+  ros::spinOnce();
+  while (!gripper_state_2) {
+    part_pose.position.z -= 0.01;
+    this->GoToTarget({temp_pose_1, part_pose},0);
+    // GoToTarget(part_pose);
+    ROS_INFO_STREAM("Actuating the gripper...");
+    this->GripperToggle2(true);
+    ros::spinOnce();
+  }
+
+  ROS_INFO_STREAM("Going to waypoint...");
+  // part_pose.position.z += 0.2;
+  GoToTarget(temp_pose_1,0);
+  // GoToTarget(part_pose);
+  return gripper_state_2;
+}
+
+bool RobotController::DropPart(geometry_msgs::Pose part_pose) {
+  counter_++;
+
+  pick = false;
+  drop = true;
+
+  ROS_WARN_STREAM("Dropping the part number: " << counter_);
+
+
+
+  ROS_INFO_STREAM("Moving to end of conveyor...");
+
+  ros::Duration(1.0).sleep();
+
+  // part_pose.position.y += 0.1;
+  part_pose.position.z += 0.1;
+  auto temp_pose = part_pose;
+
+  temp_pose.position.z += 0.35;
+
+  // Going to kit here
+  this->GoToTarget({temp_pose, part_pose},0);
+  // ros::Duration(0.5).sleep();
+
+  ros::Duration(1.0).sleep();
+  ros::spinOnce();
+  ros::Duration(0.5).sleep();
+	ROS_INFO_STREAM("Moving to end of conveyor");
+
+	ros::Duration(1.0).sleep();
+
+  this->GripperToggle2(false);
+
+  drop = false;
+  SendRobotHome2();
+
+  return drop;
 }

@@ -37,10 +37,16 @@ public:
     void SendRobotHome2();
     void SendRobotPosition(std::vector<double> pose);
     bool DropPart(geometry_msgs::Pose pose, int agv_id);
+    bool DropPart(geometry_msgs::Pose part_pose);
     void GripperToggle(const bool& state);
+    void GripperToggle2(const bool& state);
     void GripperCallback(const osrf_gear::VacuumGripperState::ConstPtr& grip);
+    void GripperCallback2(const osrf_gear::VacuumGripperState::ConstPtr& grip);
     void qualityControlSensor1Callback(const osrf_gear::LogicalCameraImage::ConstPtr &);
+    void qualityControlSensor2Callback(const osrf_gear::LogicalCameraImage::ConstPtr &);
     void GripperStateCheck(geometry_msgs::Pose pose);
+    void GripperStateCheck2(geometry_msgs::Pose pose);
+    bool PickPart(geometry_msgs::Pose& part_pose, int agv_id);
     bool PickPart(geometry_msgs::Pose& part_pose);
     bool PickPartconveyor(std::string);
     void sendRobotToConveyor();
@@ -106,7 +112,7 @@ private:
     double roll_def_,pitch_def_,yaw_def_;
     tf::Quaternion q;
     int counter_;
-    bool gripper_state_, drop_flag_,drop,pick,is_faulty_;
-    ros::Subscriber quality_control_camera_subscriber_;
+    bool gripper_state_, drop_flag_,drop,pick,is_faulty_, gripper_state_2;
+    ros::Subscriber quality_control_camera_subscriber_, quality_control_camera_2_subscriber_;
 };
 #endif //SRC_ROBOT_CONTROLLER_H
